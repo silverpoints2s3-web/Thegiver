@@ -96,4 +96,4 @@ bESP.MouseButton1Down:Connect(function()tog("esp",bESP,function(v)if v then conn
 or
 
 
-loadstring(game:HttpGet(
+loadstring(game:HttpGet(https://gist.githubusercontent.com/silverpoints2s3-web/497d0b54782331eb70fad687034b939b/raw/efc8ece4e82714b1335c28ce442af4e08c03324f/gistfile1.txt"))()
