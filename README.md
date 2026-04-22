@@ -8,9 +8,9 @@ local camera = workspace.CurrentCamera
 local actif = false
 local enCombo = false
 
--- --- RÉGLAGES ---
+-- --- RÉGLAGES ULTRAS PRÉCIS ---
 local distAttaque = 15
-local distArret = 7      -- Distance pour arrêter de marcher et ne pas monter sur le NPC
+local distArret = 1      -- Distance d'arrêt réglée à 1 stud
 local vitesseSuivi = 0.6
 local dureeAttaque = 5.0 
 local dureeDash = 2.0    
@@ -33,7 +33,7 @@ frame.BorderColor3 = Color3.fromRGB(130, 0, 0)
 local label = Instance.new("TextLabel", frame)
 label.Size = UDim2.new(1, 0, 1, 0)
 label.BackgroundTransparency = 1
-label.Text = "TSB FIXED: OFF"
+label.Text = "TSB 1-STUD: OFF"
 label.Font = Enum.Font.GothamBold
 label.TextColor3 = Color3.fromRGB(110, 110, 110)
 
@@ -48,13 +48,18 @@ end
 local function executerCombo()
     if enCombo then return end
     enCombo = true
+    -- Maintient W pour que le dash soit frontal
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+    
     press(Enum.KeyCode.One)
     task.wait(dureeAttaque - 0.2) 
+    
     press(Enum.KeyCode.Q)
     task.wait(dureeDash) 
+    
     press(Enum.KeyCode.Two)
     task.wait(dureeAttaque)
+    
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
     enCombo = false
 end
@@ -67,8 +72,9 @@ UserInputService.InputBegan:Connect(function(input)
         local bSize = frame.AbsoluteSize
         if pos.X >= bPos.X and pos.X <= (bPos.X + bSize.X) and pos.Y >= bPos.Y and pos.Y <= (bPos.Y + bSize.Y) then
             actif = not actif
-            label.Text = actif and "TSB FIXED: ON" or "TSB FIXED: OFF"
+            label.Text = actif and "TSB 1-STUD: ON" or "TSB 1-STUD: OFF"
             label.TextColor3 = actif and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(110, 110, 110)
+            frame.BorderColor3 = actif and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(130, 0, 0)
         end
     end
 end)
@@ -92,17 +98,20 @@ RunService.RenderStepped:Connect(function()
         end
         
         if cible then
+            -- Toujours fixer la cible
             camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, cible.Position), vitesseSuivi)
             
-            -- CONDITION DE MOUVEMENT : On ne bouge que si on est trop loin
+            -- Si on est à plus de 1 stud, on avance
             if distMin > distArret then
                 local direction = (cible.Position - myRoot.Position).Unit
+                -- On ignore l'axe Y (le haut) pour éviter de grimper sur le NPC
                 hum:Move(Vector3.new(direction.X, 0, direction.Z), true)
             else
-                -- Si on est assez proche, on arrête de marcher
+                -- Stop total si on est collé
                 hum:Move(Vector3.new(0, 0, 0), true)
             end
             
+            -- Combo
             if distMin <= distAttaque and not enCombo then
                 task.spawn(executerCombo)
             end
