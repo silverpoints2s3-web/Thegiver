@@ -8,12 +8,13 @@ local camera = workspace.CurrentCamera
 local actif = false
 local enCombo = false
 
--- --- RÉGLAGES PRÉCIS ---
+-- --- RÉGLAGES CHRONO (5s - 2s - 5s) ---
 local distAttaque = 15
 local vitesseSuivi = 0.6
-local dureeAttaque = 2.0 -- La durée que tu m'as donnée
+local dureeAttaque = 5.0 -- 5 secondes par attaque
+local dureeDash = 2.0    -- 2 secondes pour le dash
 
--- --- INTERFACE MATTE ---
+-- --- INTERFACE ---
 local screenGui = Instance.new("ScreenGui", localPlayer.PlayerGui)
 screenGui.Name = "TennySystem"
 local frame = Instance.new("Frame", screenGui)
@@ -26,37 +27,32 @@ frame.BorderColor3 = Color3.fromRGB(130, 0, 0)
 local label = Instance.new("TextLabel", frame)
 label.Size = UDim2.new(1, 0, 1, 0)
 label.BackgroundTransparency = 1
-label.Text = "TSB COMBO: OFF"
+label.Text = "TSB COMBO (5s): OFF"
 label.Font = Enum.Font.GothamBold
-label.TextSize = 14
 label.TextColor3 = Color3.fromRGB(110, 110, 110)
 
--- --- SIMULATIONS ---
+-- --- SIMULATION ---
 local function press(key)
     VirtualInputManager:SendKeyEvent(true, key, false, game)
     task.wait(0.05)
     VirtualInputManager:SendKeyEvent(false, key, false, game)
 end
 
--- --- SÉQUENCE DE COMBAT (TIMING 2s) ---
+-- --- SÉQUENCE LONGUE ---
 local function executerCombo()
     if enCombo then return end
     enCombo = true
     
-    -- 1. Lancement Attaque 1 (Touche 1)
+    -- 1. Attaque 1 (5 secondes)
     press(Enum.KeyCode.One)
+    task.wait(dureeAttaque - 0.2) -- On attend presque la fin
     
-    -- On attend que l'attaque se finisse (environ 1.8s pour anticiper le dash)
-    task.wait(dureeAttaque - 0.2)
-    
-    -- 2. Dash (Touche Q) pour annuler la fin de l'anim ou se replacer
+    -- 2. Dash (2 secondes)
     press(Enum.KeyCode.Q)
-    task.wait(0.3) -- Temps du dash
+    task.wait(dureeDash) -- On laisse le dash se finir
     
-    -- 3. Lancement Attaque 2 (Touche 2)
+    -- 3. Attaque 2 (5 secondes)
     press(Enum.KeyCode.Two)
-    
-    -- On attend que la deuxième attaque se finisse aussi
     task.wait(dureeAttaque)
     
     enCombo = false
@@ -70,7 +66,7 @@ UserInputService.InputBegan:Connect(function(input)
         local bSize = frame.AbsoluteSize
         if pos.X >= bPos.X and pos.X <= (bPos.X + bSize.X) and pos.Y >= bPos.Y and pos.Y <= (bPos.Y + bSize.Y) then
             actif = not actif
-            label.Text = actif and "TSB COMBO: ON" or "TSB COMBO: OFF"
+            label.Text = actif and "TSB COMBO (5s): ON" or "TSB COMBO (5s): OFF"
             label.TextColor3 = actif and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(110, 110, 110)
         end
     end
@@ -96,11 +92,9 @@ RunService.RenderStepped:Connect(function()
         end
         
         if cible then
-            -- Suivi caméra et perso
             camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, cible.Position), vitesseSuivi)
             hum:Move((cible.Position - myRoot.Position).Unit, true)
             
-            -- Lancer le combo à 2 secondes si à portée
             if distMin <= distAttaque and not enCombo then
                 task.spawn(executerCombo)
             end
