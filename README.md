@@ -1,101 +1,95 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+-- --- CHARGEMENT DE L'INTERFACE WINDUI ---
+local WindUI = loadstring(game:HttpGet('https://github.com/Footagesus/WindUI/releases/latest/download/main.lua'))()
 
+-- --- SERVICES ---
+local Players = game:GetService('Players')
+local RunService = game:GetService('RunService')
+local VirtualInputManager = game:GetService('VirtualInputManager')
 local localPlayer = Players.LocalPlayer
-local camera = workspace.CurrentCamera
-local actif = false
-local enCombo = false
 
--- --- RÉGLAGES ---
-local distAttaque = 12
-local distArret = 3
-local vitesseSuivi = 0.5
+-- --- VARIABLES DE CONFIGURATION ---
+_G.KyotoEnabled = false
+_G.KyotoDelay = 5000 -- Tes 5 secondes
+_G.DashDelay = 2000  -- Tes 2 secondes
+_G.EnCombo = false
 
--- --- SIMULATION ---
-local function press(key)
-    VirtualInputManager:SendKeyEvent(true, key, false, game)
+-- --- THÈME BLOOD SHADOW ---
+local Window = WindUI:CreateWindow({
+    Title = "Dovi's Hub v1.1",
+    Icon = "rbxassetid://10888673661",
+    Author = "Dovi",
+    Size = UDim2.new(0, 450, 0, 350)
+})
+
+-- --- LOGIQUE DU COMBO (Ton timing exact) ---
+local function executeKyoto()
+    if _G.EnCombo then return end
+    _G.EnCombo = true
+    
+    -- Maintien de l'avance (Anti-recul)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+
+    -- ATTAQUE 1
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.One, false, game)
     task.wait(0.05)
-    VirtualInputManager:SendKeyEvent(false, key, false, game)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.One, false, game)
+    task.wait(_G.KyotoDelay / 1000 - 0.2)
+
+    -- DASH
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+    task.wait(0.1)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game) -- Force l'anti-recul
+    task.wait(_G.DashDelay / 1000 - 0.1)
+
+    -- ATTAQUE 2
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+    task.wait(_G.KyotoDelay / 1000)
+
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+    _G.EnCombo = false
 end
 
--- --- LE KYOTO COMBO ---
-local function executerKyotoCombo()
-    if enCombo then return end
-    enCombo = true
-    
-    -- 1. Approche et Saut d'ouverture
-    press(Enum.KeyCode.Space)
-    task.wait(0.2)
-    
-    -- 2. Série de coups normaux (M1) en l'air
-    for i = 1, 3 do
-        press(Enum.KeyCode.One) -- Ton bouton M1
-        task.wait(0.4)
-    end
-    
-    -- 3. Bousculade (Capacité 3) pour projeter
-    press(Enum.KeyCode.Three)
-    task.wait(0.6)
-    
-    -- 4. Dash de rattrapage (Q)
-    press(Enum.KeyCode.Q)
-    task.wait(0.2)
-    
-    -- 5. Coupe Supérieure (Capacité 4) pour finir le combo aérien
-    press(Enum.KeyCode.Four)
-    task.wait(1.5)
-    
-    enCombo = false
-end
+-- --- ONGLETS ---
+local MainTab = Window:Tab("Combat")
 
--- --- INTERFACE ---
-local screenGui = Instance.new("ScreenGui", localPlayer.PlayerGui)
-screenGui.Name = "KyotoSystem"
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 200, 0, 60)
-frame.Position = UDim2.new(0.5, -100, 0.05, 0)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-local label = Instance.new("TextLabel", frame)
-label.Size = UDim2.new(1, 0, 1, 0)
-label.Text = "KYOTO MODE: OFF"
-label.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local pos = input.Position
-        local bPos = frame.AbsolutePosition
-        local bSize = frame.AbsoluteSize
-        if pos.X >= bPos.X and pos.X <= (bPos.X + bSize.X) and pos.Y >= bPos.Y and pos.Y <= (bPos.Y + bSize.Y) then
-            actif = not actif
-            label.Text = actif and "KYOTO MODE: ON" or "KYOTO MODE: OFF"
-        end
+MainTab:Toggle({
+    Title = "Kyoto Combo",
+    Default = false,
+    Callback = function(state)
+        _G.KyotoEnabled = state
     end
-end)
+})
+
+MainTab:Slider({
+    Title = "Kyoto Delay (ms)",
+    Min = 1000,
+    Max = 10000,
+    Default = 5000,
+    Callback = function(value)
+        _G.KyotoDelay = value
+    end
+})
 
 -- --- BOUCLE DE DÉTECTION ---
 RunService.RenderStepped:Connect(function()
-    if actif and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-        local myRoot = localPlayer.Character.PrimaryPart
-        local hum = localPlayer.Character.Humanoid
-        local cible = nil
-        local distMin = 50
-        
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("Humanoid") and v.Parent ~= localPlayer.Character and v.Health > 0 then
-                local root = v.Parent:FindFirstChild("HumanoidRootPart")
-                if root and (root.Position - myRoot.Position).Magnitude < distMin then
-                    distMin = (root.Position - myRoot.Position).Magnitude
-                    cible = root
+    if _G.KyotoEnabled and not _G.EnCombo then
+        local myChar = localPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            -- Détection automatique à 12 studs
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("Humanoid") and v.Parent ~= myChar and v.Health > 0 then
+                    local root = v.Parent:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        local dist = (root.Position - myChar.HumanoidRootPart.Position).Magnitude
+                        if dist < 12 then
+                            task.spawn(executeKyoto)
+                        end
+                    end
                 end
-            end
-        end
-        
-        if cible then
-            camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, cible.Position), vitesseSuivi)
-            if distMin <= distAttaque and not enCombo then
-                task.spawn(executerKyotoCombo)
             end
         end
     end
